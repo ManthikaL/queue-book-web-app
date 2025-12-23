@@ -6,7 +6,11 @@ import { useTheme } from "@/components/theme-provider"
 import { Moon, Sun } from "lucide-react"
 
 export function PublicNavbar() {
-  const { theme, toggleTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
+
+  const toggleTheme = () => {
+    setTheme(theme === "dark" ? "light" : "dark")
+  }
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">

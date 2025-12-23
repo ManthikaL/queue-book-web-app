@@ -12,16 +12,22 @@ export interface Service {
 
 export interface Booking {
   id: string
+  token: string
   serviceId: string
   serviceName: string
   customerName: string
+  customerEmail: string
   customerPhone: string
   date: string
   time: string
+  scheduledAt: Date
   notes: string
   status: "pending" | "confirmed" | "completed" | "cancelled"
   estimatedDuration: number
   price: number
+  staffId?: string
+  rescheduledFrom?: Date
+  lastUpdated: Date
 }
 
 export interface WorkingHours {
@@ -52,6 +58,49 @@ export interface Business {
   contactPhone: string
   address: string
   branches: Branch[]
+}
+
+export interface StaffMember {
+  id: string
+  branchId: string
+  name: string
+  role: string
+  skills: string[] // serviceIds they can provide
+  avatar: string
+  phone: string
+  email: string
+  workingHours: WorkingHours
+  active: boolean
+  rating: number
+}
+
+export interface StaffAvailability {
+  staffId: string
+  date: string
+  slots: {
+    time: string
+    available: boolean
+  }[]
+}
+
+export interface Invoice {
+  id: string
+  type: "BOOKING" | "RESCHEDULE"
+  bookingId: string
+  customerName: string
+  customerEmail: string
+  customerPhone: string
+  amount: number
+  status: "paid" | "unpaid" | "refunded"
+  createdAt: string
+  dueAt: string
+  lineItems: {
+    description: string
+    amount: number
+  }[]
+  serviceName?: string
+  serviceDate?: string
+  newServiceDate?: string
 }
 
 export const mockServices: Service[] = [
@@ -279,31 +328,281 @@ export const mockBusinesses: Business[] = [
   },
 ]
 
+export const mockStaff: StaffMember[] = [
+  {
+    id: "staff1",
+    branchId: "b1",
+    name: "Sarah Mitchell",
+    role: "Senior Stylist",
+    skills: ["1", "7"],
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
+    phone: "+1-555-1001",
+    email: "sarah@premiumhair.com",
+    workingHours: {
+      Monday: { open: "09:00", close: "18:00" },
+      Tuesday: { open: "09:00", close: "18:00" },
+      Wednesday: { open: "10:00", close: "18:00" },
+      Thursday: { open: "09:00", close: "20:00" },
+      Friday: { open: "09:00", close: "20:00" },
+      Saturday: { open: "10:00", close: "18:00" },
+      Sunday: { closed: true, open: "", close: "" },
+    },
+    active: true,
+    rating: 4.9,
+  },
+  {
+    id: "staff2",
+    branchId: "b1",
+    name: "Marcus Johnson",
+    role: "Colorist",
+    skills: ["7"],
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus",
+    phone: "+1-555-1002",
+    email: "marcus@premiumhair.com",
+    workingHours: {
+      Monday: { open: "12:00", close: "18:00" },
+      Tuesday: { open: "09:00", close: "18:00" },
+      Wednesday: { open: "09:00", close: "18:00" },
+      Thursday: { open: "09:00", close: "20:00" },
+      Friday: { open: "09:00", close: "20:00" },
+      Saturday: { open: "10:00", close: "18:00" },
+      Sunday: { closed: true, open: "", close: "" },
+    },
+    active: true,
+    rating: 4.8,
+  },
+  {
+    id: "staff3",
+    branchId: "b2",
+    name: "James Chen",
+    role: "Lead Technician",
+    skills: ["2", "4"],
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=James",
+    phone: "+1-555-2001",
+    email: "james@techservicepro.com",
+    workingHours: {
+      Monday: { open: "08:00", close: "17:00" },
+      Tuesday: { open: "08:00", close: "17:00" },
+      Wednesday: { open: "08:00", close: "17:00" },
+      Thursday: { open: "08:00", close: "17:00" },
+      Friday: { open: "08:00", close: "17:00" },
+      Saturday: { open: "10:00", close: "17:00" },
+      Sunday: { open: "11:00", close: "17:00" },
+    },
+    active: true,
+    rating: 4.9,
+  },
+  {
+    id: "staff4",
+    branchId: "b2",
+    name: "Emily Rodriguez",
+    role: "Repair Specialist",
+    skills: ["2", "4"],
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emily",
+    phone: "+1-555-2002",
+    email: "emily@techservicepro.com",
+    workingHours: {
+      Monday: { open: "08:00", close: "19:00" },
+      Tuesday: { open: "08:00", close: "19:00" },
+      Wednesday: { closed: true, open: "", close: "" },
+      Thursday: { open: "08:00", close: "19:00" },
+      Friday: { open: "08:00", close: "19:00" },
+      Saturday: { open: "10:00", close: "17:00" },
+      Sunday: { closed: true, open: "", close: "" },
+    },
+    active: true,
+    rating: 4.7,
+  },
+  {
+    id: "staff5",
+    branchId: "b3",
+    name: "Dr. Michael Lee",
+    role: "General Practitioner",
+    skills: ["1"],
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Michael",
+    phone: "+1-555-3001",
+    email: "michael@cityhealthclinic.com",
+    workingHours: {
+      Monday: { open: "09:00", close: "18:00" },
+      Tuesday: { open: "09:00", close: "18:00" },
+      Wednesday: { open: "09:00", close: "18:00" },
+      Thursday: { open: "09:00", close: "18:00" },
+      Friday: { open: "09:00", close: "18:00" },
+      Saturday: { open: "10:00", close: "14:00" },
+      Sunday: { closed: true, open: "", close: "" },
+    },
+    active: true,
+    rating: 4.95,
+  },
+  {
+    id: "staff6",
+    branchId: "b3",
+    name: "Dr. Jessica Wong",
+    role: "Dentist",
+    skills: ["5"],
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jessica",
+    phone: "+1-555-3002",
+    email: "jessica@cityhealthclinic.com",
+    workingHours: {
+      Monday: { open: "08:00", close: "17:00" },
+      Tuesday: { open: "09:00", close: "18:00" },
+      Wednesday: { open: "09:00", close: "18:00" },
+      Thursday: { open: "09:00", close: "18:00" },
+      Friday: { open: "08:00", close: "17:00" },
+      Saturday: { open: "09:00", close: "14:00" },
+      Sunday: { closed: true, open: "", close: "" },
+    },
+    active: true,
+    rating: 4.9,
+  },
+  {
+    id: "staff7",
+    branchId: "b4",
+    name: "Alex Kumar",
+    role: "Math Tutor",
+    skills: ["3", "6"],
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex",
+    phone: "+1-555-4001",
+    email: "alex@excellencetutoring.com",
+    workingHours: {
+      Monday: { open: "14:00", close: "20:00" },
+      Tuesday: { open: "14:00", close: "20:00" },
+      Wednesday: { open: "14:00", close: "20:00" },
+      Thursday: { open: "14:00", close: "20:00" },
+      Friday: { open: "14:00", close: "18:00" },
+      Saturday: { open: "10:00", close: "16:00" },
+      Sunday: { open: "10:00", close: "16:00" },
+    },
+    active: true,
+    rating: 4.8,
+  },
+  {
+    id: "staff8",
+    branchId: "b4",
+    name: "Priya Patel",
+    role: "English Tutor",
+    skills: ["7"],
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Priya",
+    phone: "+1-555-4002",
+    email: "priya@excellencetutoring.com",
+    workingHours: {
+      Monday: { open: "15:00", close: "20:00" },
+      Tuesday: { open: "14:00", close: "20:00" },
+      Wednesday: { open: "14:00", close: "20:00" },
+      Thursday: { open: "14:00", close: "20:00" },
+      Friday: { open: "14:00", close: "18:00" },
+      Saturday: { open: "10:00", close: "16:00" },
+      Sunday: { open: "10:00", close: "16:00" },
+    },
+    active: true,
+    rating: 4.9,
+  },
+]
+
 export const mockBookings: Booking[] = [
   {
     id: "1",
+    token: "BK-2025-001",
     serviceId: "1",
     serviceName: "Hair Cut & Styling",
     customerName: "John Doe",
+    customerEmail: "john@example.com",
     customerPhone: "+1-555-0123",
     date: "2025-01-25",
     time: "2:00 PM",
+    scheduledAt: new Date("2025-01-25T14:00:00"),
     notes: "Please keep it short on the sides",
     status: "confirmed",
     estimatedDuration: 45,
     price: 25,
+    staffId: "staff1",
+    lastUpdated: new Date("2025-01-20"),
   },
   {
     id: "2",
+    token: "BK-2025-002",
     serviceId: "2",
     serviceName: "General Checkup",
     customerName: "Jane Smith",
+    customerEmail: "jane@example.com",
     customerPhone: "+1-555-0456",
     date: "2025-01-26",
     time: "10:00 AM",
+    scheduledAt: new Date("2025-01-26T10:00:00"),
     notes: "",
     status: "pending",
     estimatedDuration: 30,
     price: 50,
+    lastUpdated: new Date("2025-01-22"),
+  },
+  {
+    id: "3",
+    token: "BK-2025-003",
+    serviceId: "1",
+    serviceName: "Hair Cut & Styling",
+    customerName: "Alice Johnson",
+    customerEmail: "alice@example.com",
+    customerPhone: "+1-555-0789",
+    date: "2025-01-20",
+    time: "3:00 PM",
+    scheduledAt: new Date("2025-01-20T15:00:00"),
+    notes: "Fade on sides",
+    status: "completed",
+    estimatedDuration: 45,
+    price: 25,
+    staffId: "staff2",
+    lastUpdated: new Date("2025-01-18"),
+  },
+  {
+    id: "4",
+    token: "BK-2025-004",
+    serviceId: "3",
+    serviceName: "Car Service",
+    customerName: "Bob Wilson",
+    customerEmail: "bob@example.com",
+    customerPhone: "+1-555-1011",
+    date: "2025-01-15",
+    time: "9:00 AM",
+    scheduledAt: new Date("2025-01-15T09:00:00"),
+    notes: "Regular maintenance",
+    status: "cancelled",
+    estimatedDuration: 120,
+    price: 120,
+    staffId: "staff3",
+    lastUpdated: new Date("2025-01-10"),
+  },
+]
+
+export const mockInvoices: Invoice[] = [
+  {
+    id: "inv001",
+    type: "BOOKING",
+    bookingId: "1",
+    customerName: "John Doe",
+    customerEmail: "john@example.com",
+    customerPhone: "+1-555-0123",
+    amount: 25,
+    status: "paid",
+    createdAt: "2025-01-20",
+    dueAt: "2025-01-25",
+    lineItems: [{ description: "Hair Cut & Styling", amount: 25 }],
+    serviceName: "Hair Cut & Styling",
+    serviceDate: "2025-01-25 2:00 PM",
+  },
+  {
+    id: "inv002",
+    type: "RESCHEDULE",
+    bookingId: "2",
+    customerName: "Jane Smith",
+    customerEmail: "jane@example.com",
+    customerPhone: "+1-555-0456",
+    amount: 300,
+    status: "unpaid",
+    createdAt: "2025-01-22",
+    dueAt: "2025-01-29",
+    lineItems: [{ description: "Reschedule Fee (< 24h)", amount: 300 }],
+    serviceName: "General Checkup",
+    serviceDate: "2025-01-26 10:00 AM",
+    newServiceDate: "2025-02-02 2:30 PM",
   },
 ]

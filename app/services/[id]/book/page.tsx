@@ -2,16 +2,16 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { PublicNavbar } from "@/components/public-navbar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { mockServices } from "@/lib/mock-data"
-import { ChevronLeft, Check, Clock } from "lucide-react"
+import { mockServices, mockStaff } from "@/lib/mock-data"
+import { ChevronLeft, Check, Clock, User, AlertCircle } from "lucide-react"
 
-type BookingStep = 1 | 2 | 3
+type BookingStep = 1 | 2 | 3 | 4
 
 const TIME_SLOTS = ["9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "2:00 PM", "2:30 PM", "3:00 PM", "3:30 PM", "4:00 PM"]
 
@@ -21,16 +21,32 @@ const UPCOMING_DATES = Array.from({ length: 7 }, (_, i) => {
   return date
 })
 
+const VALIDATION = {
+  fullName: /^[A-Za-z\s]+$/,
+  phone: /^\d+$/,
+  maxNoteLength: 350,
+}
+
+interface ValidationErrors {
+  name: string
+  phone: string
+  notes: string
+}
+
 export default function ServiceDetailPage() {
   const params = useParams()
+  const router = useRouter()
   const id = params.id as string
   const service = mockServices.find((s) => s.id === id)
   const [step, setStep] = useState<BookingStep>(1)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
+  const [selectedStaff, setSelectedStaff] = useState<string | null>(null)
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
   const [notes, setNotes] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [errors, setErrors] = useState<ValidationErrors>({ name: "", phone: "", notes: "" })
 
   if (!service) {
     return (
@@ -43,25 +59,77 @@ export default function ServiceDetailPage() {
     )
   }
 
+  const availableStaff = mockStaff.filter((s) => s.skills.includes(id) && s.active)
+
+  const validateForm = () => {
+    const newErrors: ValidationErrors = { name: "", phone: "", notes: "" }
+    let isValid = true
+
+    if (!customerName || !VALIDATION.fullName.test(customerName)) {
+      newErrors.name = "Full name can contain only letters."
+      isValid = false
+    }
+
+    if (!customerPhone || !VALIDATION.phone.test(customerPhone)) {
+      newErrors.phone = "Phone number can contain only numbers."
+      isValid = false
+    }
+
+    if (notes.length > VALIDATION.maxNoteLength) {
+      newErrors.notes = "Notes cannot exceed 350 characters."
+      isValid = false
+    }
+
+    setErrors(newErrors)
+    return isValid
+  }
+
   const isStep1Valid = selectedDate && selectedTime
-  const isStep2Valid = customerName && customerPhone
-  const canProceed = step === 1 ? isStep1Valid : step === 2 ? isStep2Valid : true
+  const isStep2Valid = true
+  const isStep3Valid =
+    customerName &&
+    customerPhone &&
+    !errors.name &&
+    !errors.phone &&
+    notes.length <= VALIDATION.maxNoteLength &&
+    VALIDATION.fullName.test(customerName) &&
+    VALIDATION.phone.test(customerPhone)
+  const canProceed = step === 1 ? isStep1Valid : step === 2 ? isStep2Valid : step === 3 ? isStep3Valid : true
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", weekday: "short" }).format(date)
   }
 
-  const handleBooking = () => {
-    console.log({
+  const handleBooking = async () => {
+    if (!validateForm()) {
+      return
+    }
+
+    setIsSubmitting(true)
+
+    const bookingToken = `BK-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, "0")}`
+    const bookingData = {
+      bookingId: `booking-${Date.now()}`,
+      bookingToken,
       service: service.id,
-      date: selectedDate,
+      serviceName: service.name,
+      date: selectedDate?.toISOString(),
       time: selectedTime,
+      staffId: selectedStaff || "any",
       name: customerName,
       phone: customerPhone,
       notes,
-    })
-    alert("Booking confirmed! Check your My Bookings page.")
-    setStep(1)
+      durationMins: service.duration,
+    }
+
+    sessionStorage.setItem("lastBooking", JSON.stringify(bookingData))
+
+    setTimeout(() => {
+      setIsSubmitting(false)
+      router.push(`/services/${id}/book/success`)
+    }, 1000)
   }
 
   return (
@@ -114,7 +182,7 @@ export default function ServiceDetailPage() {
           <div className="lg:col-span-2">
             {/* Steps Indicator */}
             <div className="flex gap-4 mb-8">
-              {[1, 2, 3].map((s) => (
+              {[1, 2, 3, 4].map((s) => (
                 <div key={s} className="flex-1">
                   <div
                     className={`flex items-center justify-center h-10 rounded-full font-bold transition-all ${
@@ -126,7 +194,7 @@ export default function ServiceDetailPage() {
                     {step > s ? <Check className="w-5 h-5" /> : s}
                   </div>
                   <p className="text-xs text-foreground/60 text-center mt-2">
-                    {s === 1 ? "Date & Time" : s === 2 ? "Details" : "Confirm"}
+                    {s === 1 ? "Date & Time" : s === 2 ? "Staff" : s === 3 ? "Details" : "Confirm"}
                   </p>
                 </div>
               ))}
@@ -198,40 +266,148 @@ export default function ServiceDetailPage() {
               </Card>
             )}
 
-            {/* Step 2: Customer Details */}
+            {/* Step 2: Staff Selection */}
             {step === 2 && (
+              <Card className="border border-border/50 backdrop-blur-sm bg-card/50 p-6">
+                <h3 className="text-xl font-bold text-foreground mb-6">Choose Staff (Optional)</h3>
+                <p className="text-sm text-foreground/60 mb-6">Any available staff member by default</p>
+
+                <div className="space-y-3 mb-8">
+                  {/* Any Staff Option */}
+                  <button
+                    onClick={() => setSelectedStaff(null)}
+                    className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                      selectedStaff === null
+                        ? "bg-gradient-to-r from-blue-500/10 to-purple-600/10 border-blue-500"
+                        : "bg-muted/30 border-border hover:border-blue-500/50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+                        <User className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground">Any Staff Member</p>
+                        <p className="text-xs text-foreground/60">Let us assign the best available staff</p>
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Specific Staff Options */}
+                  {availableStaff.map((staff) => (
+                    <button
+                      key={staff.id}
+                      onClick={() => setSelectedStaff(staff.id)}
+                      className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
+                        selectedStaff === staff.id
+                          ? "bg-gradient-to-r from-blue-500/10 to-purple-600/10 border-blue-500"
+                          : "bg-muted/30 border-border hover:border-blue-500/50"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={staff.avatar || "/placeholder.svg"}
+                            alt={staff.name}
+                            className="w-12 h-12 rounded-full border-2 border-border"
+                          />
+                          <div>
+                            <p className="font-semibold text-foreground">{staff.name}</p>
+                            <p className="text-xs text-foreground/60">{staff.role}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-foreground">{staff.rating}</span>
+                          <span className="text-yellow-500">★</span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex justify-between gap-3">
+                  <Button variant="outline" onClick={() => setStep(1)}>
+                    Back
+                  </Button>
+                  <Button onClick={() => setStep(3)} className="bg-gradient-to-r from-blue-500 to-purple-600">
+                    Continue
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {/* Step 3: Customer Details */}
+            {step === 3 && (
               <Card className="border border-border/50 backdrop-blur-sm bg-card/50 p-6">
                 <h3 className="text-xl font-bold text-foreground mb-6">Enter Your Details</h3>
 
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-semibold text-foreground mb-2">Full Name</label>
+                    <label className="block text-sm font-semibold text-foreground mb-2">Full Name *</label>
                     <Input
                       type="text"
                       placeholder="John Doe"
                       value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
-                      className="backdrop-blur-sm bg-card/50"
+                      onChange={(e) => {
+                        setCustomerName(e.target.value)
+                        if (e.target.value && !VALIDATION.fullName.test(e.target.value)) {
+                          setErrors((prev) => ({ ...prev, name: "Full name can contain only letters." }))
+                        } else {
+                          setErrors((prev) => ({ ...prev, name: "" }))
+                        }
+                      }}
+                      className={`backdrop-blur-sm bg-card/50 ${errors.name ? "border-red-500" : ""}`}
                     />
+                    {errors.name && (
+                      <div className="flex items-center gap-2 mt-2 text-sm text-red-600 dark:text-red-400">
+                        <AlertCircle className="w-4 h-4" />
+                        {errors.name}
+                      </div>
+                    )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-foreground mb-2">Phone Number</label>
+                    <label className="block text-sm font-semibold text-foreground mb-2">Phone Number *</label>
                     <Input
                       type="tel"
                       placeholder="+1 (555) 123-4567"
                       value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
-                      className="backdrop-blur-sm bg-card/50"
+                      onChange={(e) => {
+                        setCustomerPhone(e.target.value)
+                        if (e.target.value && !VALIDATION.phone.test(e.target.value)) {
+                          setErrors((prev) => ({ ...prev, phone: "Phone number can contain only numbers." }))
+                        } else {
+                          setErrors((prev) => ({ ...prev, phone: "" }))
+                        }
+                      }}
+                      className={`backdrop-blur-sm bg-card/50 ${errors.phone ? "border-red-500" : ""}`}
                     />
+                    {errors.phone && (
+                      <div className="flex items-center gap-2 mt-2 text-sm text-red-600 dark:text-red-400">
+                        <AlertCircle className="w-4 h-4" />
+                        {errors.phone}
+                      </div>
+                    )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-foreground mb-2">Notes (Optional)</label>
+                    <label className="block text-sm font-semibold text-foreground mb-2">
+                      Notes (Optional)
+                      <span className="text-foreground/60 text-xs font-normal">
+                        {" "}
+                        {notes.length}/{VALIDATION.maxNoteLength}
+                      </span>
+                    </label>
                     <textarea
                       placeholder="Any special requests or notes for the service provider..."
                       value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
+                      onChange={(e) => {
+                        if (e.target.value.length <= VALIDATION.maxNoteLength) {
+                          setNotes(e.target.value)
+                          setErrors((prev) => ({ ...prev, notes: "" }))
+                        }
+                      }}
+                      maxLength={VALIDATION.maxNoteLength}
                       rows={4}
                       className="w-full px-4 py-2 rounded-lg border border-border bg-card/50 backdrop-blur-sm text-foreground placeholder:text-foreground/40 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                     />
@@ -239,12 +415,12 @@ export default function ServiceDetailPage() {
                 </div>
 
                 <div className="flex justify-between gap-3 mt-8">
-                  <Button variant="outline" onClick={() => setStep(1)}>
+                  <Button variant="outline" onClick={() => setStep(2)}>
                     Back
                   </Button>
                   <Button
-                    onClick={() => setStep(3)}
-                    disabled={!canProceed}
+                    onClick={() => setStep(4)}
+                    disabled={!isStep3Valid}
                     className="bg-gradient-to-r from-blue-500 to-purple-600"
                   >
                     Review Booking
@@ -253,8 +429,8 @@ export default function ServiceDetailPage() {
               </Card>
             )}
 
-            {/* Step 3: Confirmation */}
-            {step === 3 && selectedDate && (
+            {/* Step 4: Confirmation */}
+            {step === 4 && selectedDate && (
               <Card className="border border-border/50 backdrop-blur-sm bg-card/50 p-6">
                 <h3 className="text-xl font-bold text-foreground mb-6">Confirm Your Booking</h3>
 
@@ -278,6 +454,15 @@ export default function ServiceDetailPage() {
                     </div>
                   </div>
 
+                  {selectedStaff && (
+                    <div className="pt-4 border-t border-border">
+                      <p className="text-sm text-foreground/60">Staff Member</p>
+                      <p className="font-semibold text-foreground">
+                        {mockStaff.find((s) => s.id === selectedStaff)?.name}
+                      </p>
+                    </div>
+                  )}
+
                   <div className="pt-4 border-t border-border">
                     <p className="text-sm text-foreground/60">Duration</p>
                     <p className="font-semibold text-foreground">{service.duration} minutes</p>
@@ -298,11 +483,15 @@ export default function ServiceDetailPage() {
                 </div>
 
                 <div className="flex justify-between gap-3">
-                  <Button variant="outline" onClick={() => setStep(2)}>
+                  <Button variant="outline" onClick={() => setStep(3)}>
                     Edit Details
                   </Button>
-                  <Button onClick={handleBooking} className="bg-gradient-to-r from-green-500 to-emerald-600">
-                    Confirm Booking
+                  <Button
+                    onClick={handleBooking}
+                    disabled={isSubmitting}
+                    className="bg-gradient-to-r from-green-500 to-emerald-600"
+                  >
+                    {isSubmitting ? "Confirming..." : "Confirm Booking"}
                   </Button>
                 </div>
               </Card>
