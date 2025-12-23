@@ -11,6 +11,8 @@ import { useTheme } from "@/components/theme-provider"
 
 const ADMIN_LINKS = [
   { href: "/admin", label: "Dashboard", icon: "📊" },
+  { href: "/admin/business", label: "Business Profile", icon: "🏢" },
+  { href: "/admin/branches", label: "Branches", icon: "📍" },
   { href: "/admin/services", label: "Services", icon: "🛠️" },
   { href: "/admin/schedule", label: "Schedule", icon: "📅" },
   { href: "/admin/queue", label: "Queue", icon: "📋" },

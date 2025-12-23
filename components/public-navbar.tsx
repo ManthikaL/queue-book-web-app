@@ -21,6 +21,12 @@ export function PublicNavbar() {
 
           <div className="flex items-center gap-1 sm:gap-4">
             <Link
+              href="/businesses"
+              className="hidden sm:block text-sm font-medium text-foreground/70 hover:text-foreground transition-colors"
+            >
+              Businesses
+            </Link>
+            <Link
               href="/services"
               className="hidden sm:block text-sm font-medium text-foreground/70 hover:text-foreground transition-colors"
             >
@@ -37,8 +43,8 @@ export function PublicNavbar() {
               {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </Button>
 
-            <Link href="/services">
-              <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90">Book Now</Button>
+            <Link href="/businesses">
+              <Button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:opacity-90">Browse</Button>
             </Link>
           </div>
         </div>
