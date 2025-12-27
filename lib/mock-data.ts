@@ -103,6 +103,34 @@ export interface Invoice {
   newServiceDate?: string
 }
 
+export interface NotificationPreferences {
+  userId: string
+  bookingConfirmed: boolean
+  reminder: boolean
+  cancellation: boolean
+  promotions: boolean
+}
+
+export interface Notification {
+  id: string
+  userId: string
+  type: "booking_confirmed" | "reminder" | "cancellation" | "promotion"
+  title: string
+  message: string
+  timestamp: Date
+  read: boolean
+  icon: string
+}
+
+export interface NotificationTemplate {
+  id: string
+  name: string
+  type: "booking_confirmed" | "reminder" | "cancellation" | "promotion"
+  subject: string
+  body: string
+  variables: string[]
+}
+
 export const mockServices: Service[] = [
   {
     id: "1",
@@ -606,3 +634,99 @@ export const mockInvoices: Invoice[] = [
     newServiceDate: "2025-02-02 2:30 PM",
   },
 ]
+
+export const mockNotifications: Notification[] = [
+  {
+    id: "notif1",
+    userId: "user1",
+    type: "booking_confirmed",
+    title: "Booking Confirmed",
+    message: "Your appointment with Premium Hair Studio has been confirmed for Jan 25 at 2:00 PM",
+    timestamp: new Date("2025-01-20T10:30:00"),
+    read: false,
+    icon: "CheckCircle",
+  },
+  {
+    id: "notif2",
+    userId: "user1",
+    type: "reminder",
+    title: "Appointment Reminder",
+    message: "Reminder: Your appointment is coming up in 24 hours - Hair Cut & Styling at 2:00 PM",
+    timestamp: new Date("2025-01-24T14:00:00"),
+    read: false,
+    icon: "Clock",
+  },
+  {
+    id: "notif3",
+    userId: "user1",
+    type: "promotion",
+    title: "Special Offer",
+    message: "Get 20% off on Hair Coloring Services this weekend only!",
+    timestamp: new Date("2025-01-18T09:00:00"),
+    read: true,
+    icon: "Gift",
+  },
+  {
+    id: "notif4",
+    userId: "user1",
+    type: "booking_confirmed",
+    title: "Booking Confirmed",
+    message: "Your appointment with City Health Clinic has been confirmed for Jan 26 at 10:00 AM",
+    timestamp: new Date("2025-01-22T15:20:00"),
+    read: true,
+    icon: "CheckCircle",
+  },
+  {
+    id: "notif5",
+    userId: "user1",
+    type: "cancellation",
+    title: "Appointment Cancelled",
+    message: "Your appointment (Car Service - BK-2025-004) has been cancelled.",
+    timestamp: new Date("2025-01-10T11:45:00"),
+    read: true,
+    icon: "XCircle",
+  },
+]
+
+export const mockNotificationTemplates: NotificationTemplate[] = [
+  {
+    id: "tmpl1",
+    name: "Booking Confirmation",
+    type: "booking_confirmed",
+    subject: "Your booking is confirmed - {{serviceName}}",
+    body: "Hi {{customerName}},\n\nYour appointment has been confirmed!\n\nService: {{serviceName}}\nDate & Time: {{dateTime}}\nToken: {{token}}\nDuration: {{duration}} minutes\n\nThank you!",
+    variables: ["customerName", "serviceName", "dateTime", "token", "duration"],
+  },
+  {
+    id: "tmpl2",
+    name: "Appointment Reminder",
+    type: "reminder",
+    subject: "Reminder: Your appointment is coming up tomorrow",
+    body: "Hi {{customerName}},\n\nThis is a reminder about your upcoming appointment.\n\nService: {{serviceName}}\nTime: {{dateTime}}\nLocation: {{location}}\nToken: {{token}}\n\nPlease arrive 5 minutes early.",
+    variables: ["customerName", "serviceName", "dateTime", "location", "token"],
+  },
+  {
+    id: "tmpl3",
+    name: "Cancellation Notice",
+    type: "cancellation",
+    subject: "Your appointment has been cancelled",
+    body: "Hi {{customerName}},\n\nWe regret to inform you that your appointment has been cancelled.\n\nService: {{serviceName}}\nOriginal Date: {{dateTime}}\nToken: {{token}}\n\nIf you have questions, please contact us.",
+    variables: ["customerName", "serviceName", "dateTime", "token"],
+  },
+  {
+    id: "tmpl4",
+    name: "Promotional Offer",
+    type: "promotion",
+    subject: "Exclusive offer for you - {{discount}}% off",
+    body: "Hi {{customerName}},\n\nWe have a special offer just for you!\n\n{{offerDescription}}\nDiscount: {{discount}}%\nValid until: {{expiryDate}}\n\nBook now and save!",
+    variables: ["customerName", "offerDescription", "discount", "expiryDate"],
+  },
+]
+
+export const mockNotificationPreferences: NotificationPreferences = {
+  userId: "user1",
+  bookingConfirmed: true,
+  reminder: true,
+  cancellation: true,
+  promotions: true,
+}

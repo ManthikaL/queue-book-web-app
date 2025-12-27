@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "@/components/theme-provider"
-import { Moon, Sun } from "lucide-react"
+import { Moon, Sun, Bell } from "lucide-react"
 
 export function PublicNavbar() {
   const { theme, setTheme } = useTheme()
@@ -43,7 +43,14 @@ export function PublicNavbar() {
               My Bookings
             </Link>
 
-            <Button variant="ghost" size="icon" onClick={toggleTheme} className="ml-2">
+            <Link href="/notifications" className="relative">
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="w-4 h-4" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              </Button>
+            </Link>
+
+            <Button variant="ghost" size="icon" onClick={toggleTheme}>
               {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             </Button>
 

@@ -17,8 +17,10 @@ const ADMIN_LINKS = [
   { href: "/admin/services", label: "Services", icon: "🛠️" },
   { href: "/admin/schedule", label: "Schedule", icon: "📅" },
   { href: "/admin/queue", label: "Queue", icon: "📋" },
-  { href: "/admin/reports", label: "Reports", icon: "📈" },
-  { href: "/admin/invoices", label: "Invoices", icon: "📄" }, // Added Invoices link
+  { href: "/admin/analytics", label: "Analytics", icon: "📈" },
+  { href: "/admin/notifications", label: "Notifications", icon: "🔔" },
+  { href: "/admin/reports", label: "Reports", icon: "📄" },
+  { href: "/admin/invoices", label: "Invoices", icon: "📋" },
 ]
 
 export default function AdminLayout({
